@@ -31,9 +31,9 @@ app.post("/users", async (req,res) =>{
     const {name, email, password} = req.body
 
     const userSchema = Joi.object({
-        name:Joi.string().min(3),
-        email:Joi.string().email(),
-        password:Joi.string().min(6)
+        name:Joi.string().min(3).required(),
+        email:Joi.string().email().required(),
+        password:Joi.string().min(6).required()
     })
 
     const validation = userSchema.validate({name, email, password}, { abortEarly: false })
@@ -61,7 +61,7 @@ app.post("/users", async (req,res) =>{
 app.get("/users", async (req,res) => {
     
     try {
-        const users = await usersCollection.find().toArray()
+        const users = await db.collection("users").find().toArray()
         res.send(users)
     } catch (error) {
         console.log(error.message)
@@ -71,8 +71,6 @@ app.get("/users", async (req,res) => {
 app.post("/sign-in", async (req,res) => {
 
     const {email, password} = req.body
-
-    console.log(req.body)
 
 
     try {
@@ -85,10 +83,7 @@ app.post("/sign-in", async (req,res) => {
 
             const token = uuid()
 
-            await db.collection("sessions").insertOne({
-                id: user._id,
-                token
-            })
+            await db.collection("sessions").insertOne({id: user._id,token})
 
             return res.send(token)
 
@@ -103,9 +98,49 @@ app.post("/sign-in", async (req,res) => {
 
 app.post("/informations", async (req,res) => {
 
+    const dataInformation = req.body
+    const { authorization } = req.headers
+    const token = authorization?.replace('Bearer ', '')
+
+    const dataInformationSchema = Joi.object({
+        date:Joi.string().min(5).max(5).required(),
+        description:Joi.string().max(20),
+        type:Joi.string().valid("green","red"),
+        value:Joi.number()
+
+    })
+
+    try {
+        const id = await db.collection("sessions").findOne({token})
+
+        if(!id) return res.status(401).send("Você não tem autorização para acessar esta página.")
+
+        
+
+
+    } catch (error) {
+        console.log(error.message)
+    }
+
 })
 
 app.get("/informations", async (req,res) => {
+    const { authorization } = req.headers
+    const token = authorization?.replace('Bearer ', '')
+
+    try {
+        const id = await db.collection("sessions").findOne({token})
+
+        if(!id) return res.status(401).send("Você não tem autorização para acessar esta página.")
+
+        const informations = await db.collection("informations").find({id}).toArray()
+
+        res.send(informations)
+
+
+    } catch (error) {
+        console.log(error.message)
+    }
 
 })
 
