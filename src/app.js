@@ -6,6 +6,7 @@ import joi from "joi"
 import bcrypt from "bcrypt"
 import { v4 as uuid} from "uuid"
 import Joi from "joi"
+import dayjs from "dayjs"
 
 dotenv.config()
 
@@ -41,7 +42,7 @@ app.post("/users", async (req,res) =>{
     if(validation.error)return res.status(422).send(validation.error.details)
 
     try {
-        const emailExists = await db.collection("users").findOne({name})
+        const emailExists = await db.collection("users").findOne({email})
 
         if(emailExists)return res.status(409).send("Dados indisponíveis")
 
@@ -98,7 +99,7 @@ app.post("/sign-in", async (req,res) => {
 
 app.post("/informations", async (req,res) => {
 
-    const dataInformation = req.body
+    const { date, description, type, value } = req.body
     const { authorization } = req.headers
     const token = authorization?.replace('Bearer ', '')
 
@@ -106,17 +107,25 @@ app.post("/informations", async (req,res) => {
         date:Joi.string().min(5).max(5).required(),
         description:Joi.string().max(20),
         type:Joi.string().valid("green","red"),
-        value:Joi.number()
-
+        value:Joi.string()
     })
 
+    const validation = dataInformationSchema.validate({ date, description, type, value },{ abortEarly: false })
+
+    if(validation.error) return res.status(400).send("dados inválidos")
+
     try {
-        const id = await db.collection("sessions").findOne({token})
+        const session = await db.collection("sessions").findOne({token})
 
-        if(!id) return res.status(401).send("Você não tem autorização para acessar esta página.")
+        if(!session) return res.status(401).send("Você não tem autorização para acessar esta página.")
 
+        const userId = session.id
+
+        const newInformation = {date, description, type, value:Number(value.replace(",",".")).toFixed(2), userId}
         
+        await db.collection("informations").insertOne(newInformation)
 
+        res.status(201).send(newInformation)
 
     } catch (error) {
         console.log(error.message)
@@ -129,13 +138,17 @@ app.get("/informations", async (req,res) => {
     const token = authorization?.replace('Bearer ', '')
 
     try {
-        const id = await db.collection("sessions").findOne({token})
+        const session = await db.collection("sessions").findOne({token})
 
-        if(!id) return res.status(401).send("Você não tem autorização para acessar esta página.")
+        if(!session) return res.status(401).send("Você não tem autorização para acessar esta página.")
 
-        const informations = await db.collection("informations").find({id}).toArray()
+        const userId = session.id
 
-        res.send(informations)
+        const user = await db.collection("users").findOne({_id:ObjectId(userId)})
+
+        const informations = await db.collection("informations").find({userId}).toArray()
+
+        res.send({informations, user})
 
 
     } catch (error) {
