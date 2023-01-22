@@ -48,7 +48,7 @@ app.post("/users", async (req,res) =>{
 
         const hashPassword = bcrypt.hashSync(password,10)
 
-        await db.collection("users").insertOne({name, email, password:hashPassword})
+        await db.collection("users").insertOne({name, email, password:hashPassword,cash:0})
 
         res.status(201).send("ok")
 
@@ -121,7 +121,16 @@ app.post("/informations", async (req,res) => {
 
         const userId = session.id
 
+        const user = await db.collection("users").findOne({_id:ObjectId(userId)})
+
         const newInformation = {date, description, type, value:Number(value.replace(",",".")).toFixed(2), userId}
+
+        if(newInformation.type === "green"){
+            await db.collection("users").updateOne({_id:ObjectId(userId)},{$set:{cash:Number(user.cash) + Number(newInformation.value)}})
+        }
+        else{
+            await db.collection("users").updateOne({_id:ObjectId(userId)},{$set:{cash:(Number(user.cash) - Number(newInformation.value)).toFixed(2)}})
+        }
         
         await db.collection("informations").insertOne(newInformation)
 
@@ -147,6 +156,8 @@ app.get("/informations", async (req,res) => {
         const user = await db.collection("users").findOne({_id:ObjectId(userId)})
 
         const informations = await db.collection("informations").find({userId}).toArray()
+
+        informations.reverse()
 
         res.send({informations, user})
 
