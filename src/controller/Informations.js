@@ -1,8 +1,6 @@
 import { ObjectId } from "mongodb"
-import Joi from "joi"
 import db from "../config/Database.js"
-
-
+import { dataInformationSchema } from "../model/InformationsSchema.js"
 
 export async function getInformations(req,res){
     const { authorization } = req.headers
@@ -30,22 +28,25 @@ export async function getInformations(req,res){
 
 }
 
+
+function validation(schema,data){
+    
+        const { error } = schema.validate(data,{ abortEarly: false })
+
+        if(error) return error.details.map((err) => err.message)
+    }
+
+
 export async function postInformations(req,res){
 
     const { date, description, type, value } = req.body
     const { authorization } = req.headers
     const token = authorization?.replace('Bearer ', '')
 
-    const dataInformationSchema = Joi.object({
-        date:Joi.string().min(5).max(5).required(),
-        description:Joi.string().max(20),
-        type:Joi.string().valid("green","red"),
-        value:Joi.string()
-    })
+    const error = validation(dataInformationSchema,{ date, description, type, value })
 
-    const validation = dataInformationSchema.validate({ date, description, type, value },{ abortEarly: false })
+    if(error)return res.status(422).send(error)
 
-    if(validation.error) return res.status(400).send("dados inválidos")
 
     try {
         const session = await db.collection("sessions").findOne({token})

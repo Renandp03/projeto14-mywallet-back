@@ -1,6 +1,5 @@
 import bcrypt from "bcrypt"
 import { v4 as uuid} from "uuid"
-import Joi from "joi"
 import db from "../config/Database.js"
 
 
@@ -20,12 +19,6 @@ export async function getUsers(req,res){
 export  async function postUsers(req,res){
 
     const {name, email, password} = req.body
-
-    const userSchema = Joi.object({
-        name:Joi.string().min(3).required(),
-        email:Joi.string().email().required(),
-        password:Joi.string().min(6).required()
-    })
 
     const validation = userSchema.validate({name, email, password}, { abortEarly: false })
 
