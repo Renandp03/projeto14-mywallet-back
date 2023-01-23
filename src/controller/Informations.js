@@ -1,6 +1,5 @@
 import { ObjectId } from "mongodb"
 import db from "../config/Database.js"
-import { dataInformationSchema } from "../model/InformationsSchema.js"
 
 export async function getInformations(req,res){
     const { authorization } = req.headers
@@ -29,12 +28,6 @@ export async function getInformations(req,res){
 }
 
 
-function validation(schema,data){
-    
-        const { error } = schema.validate(data,{ abortEarly: false })
-
-        if(error) return error.details.map((err) => err.message)
-    }
 
 
 export async function postInformations(req,res){
@@ -42,10 +35,6 @@ export async function postInformations(req,res){
     const { date, description, type, value } = req.body
     const { authorization } = req.headers
     const token = authorization?.replace('Bearer ', '')
-
-    const error = validation(dataInformationSchema,{ date, description, type, value })
-
-    if(error)return res.status(422).send(error)
 
 
     try {
